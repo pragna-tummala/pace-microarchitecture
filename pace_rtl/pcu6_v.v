@@ -331,33 +331,37 @@ module pcu6_v #(parameter HART_ID = 0) (
     reg [4:0] v_lat_rd, v_lat_rs1, v_lat_rs2;
     reg [3:0] v_lat_op;
     reg [5:0] v_lat_funct6;
+    reg ext_wr_en_q;
 
     integer k;
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            pc <= 64'd0; branch_pending <= 0; wait_load <= 0;
+            pc <= 64'd0; branch_pending <= 0; wait_load <= 0; ext_wr_en_q <= 0;
             v_state <= VS_IDLE; v_we_lane0 <= 0; v_csr_we <= 0;
             for (k = 0; k < 32; k = k + 1) pcu_regs[k] <= 64'd0;
         end else begin
+                    ext_wr_en_q <= ext_wr_en;
+
             v_we_lane0 <= 0;
             v_csr_we <= 0;
             mq_push_en <= 0;   // default pulso
 
-            if (pcu_stall_now) begin
-                if (ext_wr_en && ext_wr_addr != 5'd0)
-                    pcu_regs[ext_wr_addr] <= ext_wr_data;
-            end else if (wait_load) begin
+                    end else if (wait_load) begin
                 if (ext_wr_en && ext_wr_addr != 5'd0) begin
                     pcu_regs[ext_wr_addr] <= ext_wr_data;
+                end
+                if (ext_wr_en_q) begin
                     wait_load <= 1'b0;
                 end
-            end else if (trap_taken_w) begin
-                pc <= trap_pc_w;
-                branch_pending <= 0;
-            end else if (branch_pending) begin
-                if (redirect_valid) begin pc <= redirect_pc; branch_pending <= 0; end
-            end else if (is_br[0]) begin
-                branch_pending <= 1;
+
+        end else if (trap_taken_w) begin
+            pc <= trap_pc_w;
+            branch_pending <= 0;
+        end else if (branch_pending) begin
+            if (redirect_valid) begin pc <= redirect_pc; branch_pending <= 0; end
+        end else if (is_br[0]) begin
+            branch_pending <= 1;
+
             end else if (is_load_0 || is_store_0 || is_amo_0) begin
                 $display("[PCU] ST pc=%h addr=%h f3=%h", pc, rs1_val[0*64 +: 64] + d_imm[0*64 +: 64], d_funct3[0*3 +: 3]);
                 // LOAD/STORE/AMO: empurra pra fila
