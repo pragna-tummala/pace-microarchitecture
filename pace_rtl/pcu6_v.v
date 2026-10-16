@@ -136,7 +136,8 @@ module pcu6_v #(parameter HART_ID = 0) (
         .in_valid(wr_this_lane), .in_is_fpu(is_fpu),
         .in_opcode(d_opcode), .in_funct3(d_funct3), .in_funct7(d_funct7),
         .in_rs1(d_rs1), .in_rs2(d_rs2), .in_rd(d_rd),
-        .in_rs1_val(rs1_val), .in_rs2_val(rs2_val), .in_imm(d_imm),
+        .in_rs1_val(rs1_val), .in_rs2_val(rs2_val), .in_imm(d_imm), .fsm_wb_valid(ext_wr_en), .fsm_wb_rd(ext_wr_addr), .fsm_wb_data(ext_wr_data),
+
         .out_we(cluster_we), .out_rd(cluster_rd), .out_result(cluster_result)
     );
 
