@@ -24,6 +24,10 @@ module alu_cluster #(parameter N=6, parameter DATA_W=64) (
     input  wire [N*7-1:0]      in_funct7,
     input  wire [N*5-1:0]      in_rs1, in_rs2, in_rd,
     input  wire [N*DATA_W-1:0] in_rs1_val, in_rs2_val, in_imm,
+    input  wire                fsm_wb_valid,
+    input  wire [4:0]          fsm_wb_rd,
+    input  wire [DATA_W-1:0]   fsm_wb_data,
+
     output wire [N-1:0]        out_we,
     output wire [N*5-1:0]      out_rd,
     output wire [N*DATA_W-1:0] out_result
@@ -33,11 +37,18 @@ module alu_cluster #(parameter N=6, parameter DATA_W=64) (
     genvar gi, gj;
     generate
         for (gi = 0; gi < N; gi = gi + 1) begin : g_fwd
-            wire [DATA_W-1:0] r1_base = in_rs1_val[gi*DATA_W +: DATA_W];
-            wire [DATA_W-1:0] r2_base = in_rs2_val[gi*DATA_W +: DATA_W];
-            wire [4:0]        my_rs1  = in_rs1[gi*5 +: 5];
-            wire [4:0]        my_rs2  = in_rs2[gi*5 +: 5];
+                        wire [DATA_W-1:0] r1_rf_base = in_rs1_val[gi*DATA_W +: DATA_W];
+                        wire [4:0]        my_rs1     = in_rs1[gi*5 +: 5];
+            wire [4:0]        my_rs2     = in_rs2[gi*5 +: 5];
 
+            wire [DATA_W-1:0] r2_rf_base = in_rs2_val[gi*DATA_W +: DATA_W];
+
+            // Combinatorial forwarding bypass from FSM output path
+            wire fsm_match1 = fsm_wb_valid && (fsm_wb_rd != 5'd0) && (fsm_wb_rd == my_rs1);
+            wire fsm_match2 = fsm_wb_valid && (fsm_wb_rd != 5'd0) && (fsm_wb_rd == my_rs2);
+
+            wire [DATA_W-1:0] r1_base = fsm_match1 ? fsm_wb_data : r1_rf_base;
+            wire [DATA_W-1:0] r2_base = fsm_match2 ? fsm_wb_data : r2_rf_base;
             wire [DATA_W-1:0] r1_chain [0:N-1];
             wire [DATA_W-1:0] r2_chain [0:N-1];
 
